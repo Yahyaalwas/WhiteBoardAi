@@ -5,7 +5,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from routes import upload_router, analysis_router
+try:
+    from routes import upload_router, analysis_router
+except Exception as e:
+    import sys
+    print(f"FATAL: failed to import routes: {e}", file=sys.stderr)
+    raise
+
 from config import get_settings
 
 logging.basicConfig(
@@ -49,3 +55,13 @@ app.include_router(analysis_router, prefix="/api", tags=["analysis"])
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "BoardIQ API", "version": "1.0.0"}
+
+
+@app.get("/debug")
+async def debug():
+    routes = [{"path": r.path, "methods": list(r.methods)} for r in app.routes if hasattr(r, "methods")]
+    return {
+        "routes": routes,
+        "allowed_origins": settings.origins_list,
+        "has_anthropic_key": bool(settings.anthropic_api_key),
+    }

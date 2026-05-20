@@ -11,7 +11,7 @@ const STEPS = [
   "Generating AI summary...",
 ];
 
-const API = process.env.NEXT_PUBLIC_API_URL || "";
+const API = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
 
 export default function Processing() {
   const router = useRouter();
