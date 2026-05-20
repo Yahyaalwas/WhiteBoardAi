@@ -63,6 +63,7 @@ class AnalysisResult(BaseModel):
     extracted_text: Optional[str] = None
     language_detected: Optional[List[str]] = None
     summary: Optional[str] = None
+    summary_ar: Optional[str] = None
     decisions: Optional[List[str]] = None
     risks: Optional[List[str]] = None
     blockers: Optional[List[str]] = None

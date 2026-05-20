@@ -80,6 +80,7 @@ export default function Processing() {
 
       sessionStorage.setItem("boardiq_result", JSON.stringify({
         summary: result.summary || "",
+        summary_ar: result.summary_ar || "",
         decisions: result.decisions || [],
         risks: result.risks || [],
         blockers: result.blockers || [],

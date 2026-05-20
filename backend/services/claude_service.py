@@ -117,6 +117,7 @@ class ClaudeService:
                 id=session_id or str(uuid.uuid4()),
                 status="complete",
                 summary=data.get("summary"),
+                summary_ar=data.get("summary_ar"),
                 decisions=data.get("decisions", []),
                 risks=data.get("risks", []),
                 blockers=data.get("blockers", []),

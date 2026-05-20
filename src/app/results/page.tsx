@@ -6,6 +6,7 @@ import { Logo } from "@/components/Logo";
 interface Task { title: string; owner: string; priority: string }
 interface Result {
   summary: string;
+  summary_ar: string;
   decisions: string[];
   tasks: Task[];
   risks: string[];
@@ -199,6 +200,15 @@ export default function Results() {
           <>
             {label(LABELS.summary.en, LABELS.summary.ar)}
             <p style={{ fontSize: 14, color: "#c8d0e0", lineHeight: 1.7, margin: 0 }}>{result.summary}</p>
+            {result.summary_ar && (
+              <p dir="rtl" lang="ar" style={{
+                fontSize: 14, color: "#9aa0b0", lineHeight: 1.7,
+                margin: "10px 0 0", paddingTop: 10,
+                borderTop: "1px solid var(--border)",
+              }}>
+                {result.summary_ar}
+              </p>
+            )}
           </>,
           { marginBottom: 16 }
         )}

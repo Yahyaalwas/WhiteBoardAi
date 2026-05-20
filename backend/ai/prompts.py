@@ -6,7 +6,7 @@ Your analysis must be thorough, accurate, and formatted as valid JSON.
 
 Extract and structure:
 
-1. **Summary**: A concise executive summary (2-3 sentences) of what this whiteboard session was about.
+1. **Summary**: A concise executive summary (2-3 sentences) of what this whiteboard session was about. Write it in English. Also provide an Arabic translation in the `summary_ar` field.
 
 2. **Decisions**: Key decisions that were made or documented on the board (list of strings).
 
@@ -37,7 +37,8 @@ IMPORTANT RULES:
 
 Return this exact JSON structure:
 {
-  "summary": "string",
+  "summary": "string (English)",
+  "summary_ar": "string (Arabic translation of summary)",
   "decisions": ["string"],
   "risks": ["string"],
   "blockers": ["string"],
