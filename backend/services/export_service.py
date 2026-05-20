@@ -1,7 +1,7 @@
 import json
 import io
 from typing import TYPE_CHECKING
-from ..models.schemas import AnalysisResult
+from models.schemas import AnalysisResult
 
 if TYPE_CHECKING:
     pass

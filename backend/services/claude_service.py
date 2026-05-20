@@ -3,8 +3,8 @@ import json
 import base64
 import logging
 from typing import Optional
-from ..ai.prompts import WHITEBOARD_ANALYSIS_PROMPT, OCR_ENHANCEMENT_PROMPT
-from ..models.schemas import AnalysisResult, Task, FlowchartData, Contributor, FlowNode, FlowEdge
+from ai.prompts import WHITEBOARD_ANALYSIS_PROMPT, OCR_ENHANCEMENT_PROMPT
+from models.schemas import AnalysisResult, Task, FlowchartData, Contributor, FlowNode, FlowEdge
 import uuid
 
 logger = logging.getLogger(__name__)

@@ -4,8 +4,8 @@ import uuid
 import aiofiles
 import os
 from pathlib import Path
-from ..vision.preprocessor import preprocess_whiteboard
-from ..models.schemas import UploadResponse
+from vision.preprocessor import preprocess_whiteboard
+from models.schemas import UploadResponse
 import logging
 
 router = APIRouter()

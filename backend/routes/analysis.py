@@ -5,11 +5,11 @@ import os
 import json
 from pathlib import Path
 from typing import Optional
-from ..models.schemas import AnalysisResult, AnalyzeResponse
-from ..services.claude_service import ClaudeService
-from ..services.ocr_service import OCRService
-from ..services.export_service import to_markdown, to_json, to_mermaid
-from ..config import get_settings
+from models.schemas import AnalysisResult, AnalyzeResponse
+from services.claude_service import ClaudeService
+from services.ocr_service import OCRService
+from services.export_service import to_markdown, to_json, to_mermaid
+from config import get_settings
 import logging
 import uuid
 

@@ -1,12 +1,12 @@
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
+
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from .routes import upload_router, analysis_router
-from .config import get_settings
+from routes import upload_router, analysis_router
+from config import get_settings
 
 logging.basicConfig(
     level=logging.INFO,
