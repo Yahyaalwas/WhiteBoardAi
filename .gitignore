@@ -29,6 +29,8 @@ build/
 # Uploads & Results
 backend/uploads/
 backend/results/
+uploads/
+results/
 
 # OS
 .DS_Store
