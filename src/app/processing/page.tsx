@@ -1,14 +1,14 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles, AlertCircle } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 const STEPS = [
-  "Uploading image...",
-  "Enhancing & cleaning whiteboard...",
-  "Running OCR (EN + AR)...",
-  "Extracting tasks and decisions...",
-  "Generating AI summary...",
+  { en: "Uploading image...",                    ar: "جارٍ رفع الصورة..." },
+  { en: "Enhancing whiteboard quality...",       ar: "تحسين جودة السبورة..." },
+  { en: "Extracting text (EN + AR)...",          ar: "استخراج النصوص (عربي + إنجليزي)..." },
+  { en: "Detecting tasks and decisions...",      ar: "تحديد المهام والقرارات..." },
+  { en: "Generating summary with AI...",         ar: "إنشاء الملخص بالذكاء الاصطناعي..." },
 ];
 
 const API = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
@@ -28,9 +28,9 @@ export default function Processing() {
 
   async function run() {
     try {
-      if (!API) {
-        throw new Error("NEXT_PUBLIC_API_URL is not set.\n\nGo to Vercel → Project Settings → Environment Variables and add:\nNEXT_PUBLIC_API_URL = https://your-backend.railway.app");
-      }
+      if (!API) throw new Error(
+        "Backend not configured.\n\nSet NEXT_PUBLIC_API_URL in Vercel → Settings → Environment Variables."
+      );
 
       const imageDataUrl = sessionStorage.getItem("boardiq_image");
       const filename = sessionStorage.getItem("boardiq_filename") || "board.jpg";
@@ -40,7 +40,6 @@ export default function Processing() {
       const blob = await res.blob();
       const file = new File([blob], filename, { type: blob.type || "image/jpeg" });
 
-      // Upload
       setStep(0);
       let uploadRes: Response;
       try {
@@ -49,21 +48,19 @@ export default function Processing() {
         uploadRes = await fetch(`${API}/api/upload`, { method: "POST", body: form });
       } catch {
         throw new Error(
-          `Cannot reach backend at ${API}\n\nLikely causes:\n• NEXT_PUBLIC_API_URL is wrong in Vercel env vars\n• Railway backend is not running\n• CORS: add your Vercel URL to ALLOWED_ORIGINS in Railway`
+          `Cannot reach backend at:\n${API}\n\nCheck:\n• NEXT_PUBLIC_API_URL in Vercel env vars\n• Railway service is running\n• ALLOWED_ORIGINS includes your Vercel URL`
         );
       }
 
       if (!uploadRes.ok) {
         const body = await uploadRes.text().catch(() => "");
-        throw new Error(`Upload failed (HTTP ${uploadRes.status})\n\n${body.slice(0, 200)}`);
+        throw new Error(`Upload failed (HTTP ${uploadRes.status})\n\n${body.slice(0, 300)}`);
       }
       const { session_id } = await uploadRes.json();
 
-      // Start analysis
       setStep(1);
       await fetch(`${API}/api/analyze/${session_id}`, { method: "POST" });
 
-      // Poll for result
       setStep(2);
       let result = null;
       for (let i = 0; i < 60; i++) {
@@ -74,13 +71,15 @@ export default function Processing() {
         if (!pollRes.ok) continue;
         const data = await pollRes.json();
         if (data.status === "complete") { result = data; break; }
-        if (data.status === "error") throw new Error(data.error_message || "Claude analysis failed.\n\nCheck that ANTHROPIC_API_KEY is set in Railway environment variables.");
+        if (data.status === "error") throw new Error(
+          data.error_message || "Analysis failed.\n\nCheck ANTHROPIC_API_KEY is set in Railway environment variables."
+        );
       }
 
-      if (!result) throw new Error("Timed out after 2 minutes.\n\nThe backend may be overloaded or Claude API is slow.");
+      if (!result) throw new Error("Timed out after 2 minutes. The AI may be overloaded — please try again.");
 
       sessionStorage.setItem("boardiq_result", JSON.stringify({
-        summary: result.summary || "No summary generated.",
+        summary: result.summary || "",
         decisions: result.decisions || [],
         risks: result.risks || [],
         blockers: result.blockers || [],
@@ -104,56 +103,121 @@ export default function Processing() {
 
   if (error) {
     return (
-      <main className="min-h-screen flex flex-col items-center justify-center px-4 text-center">
-        <div className="w-10 h-10 rounded-full bg-red-500/15 flex items-center justify-center mb-4">
-          <AlertCircle className="w-5 h-5 text-red-400" />
-        </div>
-        <p className="text-white font-medium mb-2">{error}</p>
+      <div style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 24,
+        textAlign: "center",
+        background: "var(--bg)",
+      }}>
+        <div style={{
+          width: 44, height: 44,
+          borderRadius: "50%",
+          background: "rgba(220,50,50,0.1)",
+          border: "1px solid rgba(220,50,50,0.2)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          marginBottom: 16, fontSize: 20,
+        }}>⚠</div>
+        <p style={{ fontSize: 15, fontWeight: 500, marginBottom: 8, color: "var(--text)" }}>{error}</p>
         {errorDetail && (
-          <pre className="text-white/30 text-xs mb-6 max-w-sm text-left bg-white/[0.03] rounded-xl p-4 whitespace-pre-wrap font-mono">
-            {errorDetail}
-          </pre>
+          <pre style={{
+            fontSize: 12,
+            color: "var(--muted)",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            borderRadius: 8,
+            padding: 16,
+            maxWidth: 400,
+            textAlign: "left",
+            whiteSpace: "pre-wrap",
+            marginBottom: 16,
+            fontFamily: "monospace",
+          }}>{errorDetail}</pre>
         )}
-        <p className="text-white/20 text-xs mb-6">
-          API: <span className="font-mono">{API || "(not set)"}</span>
+        <p style={{ fontSize: 11, color: "var(--muted)", marginBottom: 20, fontFamily: "monospace" }}>
+          API: {API || "(not configured)"}
         </p>
         <button
           onClick={() => router.push("/")}
-          className="text-violet-400 hover:text-violet-300 text-sm transition-colors"
+          style={{
+            fontSize: 13, color: "#3b6ef5", background: "none",
+            border: "1px solid rgba(59,110,245,0.3)", borderRadius: 6,
+            padding: "8px 16px", cursor: "pointer", fontFamily: "inherit",
+          }}
         >
-          ← Try again
+          ← Go back / العودة
         </button>
-      </main>
+      </div>
     );
   }
 
+  const progress = ((step + 1) / STEPS.length) * 100;
+
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center px-4">
-      <div className="w-12 h-12 rounded-xl bg-violet-600 flex items-center justify-center mb-8">
-        <Sparkles className="w-6 h-6 text-white animate-pulse" />
-      </div>
-      <h2 className="text-white font-semibold text-lg mb-8">Analyzing your board...</h2>
-      <div className="w-full max-w-xs space-y-2">
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 24,
+      background: "var(--bg)",
+    }}>
+      <Logo size={40} />
+
+      <p style={{ fontSize: 15, fontWeight: 500, margin: "20px 0 6px", color: "var(--text)" }}>
+        Analyzing your board
+      </p>
+      <p dir="rtl" lang="ar" style={{ fontSize: 14, color: "var(--muted)", marginBottom: 36 }}>
+        جارٍ تحليل سبورتك
+      </p>
+
+      <div style={{ width: "100%", maxWidth: 340, marginBottom: 28 }}>
         {STEPS.map((s, i) => (
-          <div key={s} className={`flex items-center gap-3 text-sm transition-all duration-500 ${
-            i <= step ? "text-white" : "text-white/20"
-          }`}>
-            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-              i < step ? "bg-violet-400" :
-              i === step ? "bg-violet-400 animate-pulse" :
-              "bg-white/10"
-            }`} />
-            {s}
+          <div key={i} style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 12,
+            padding: "8px 0",
+            opacity: i <= step ? 1 : 0.25,
+            transition: "opacity 0.4s ease",
+          }}>
+            <div style={{
+              width: 7, height: 7,
+              borderRadius: "50%",
+              background: i < step ? "#3b6ef5" : i === step ? "#3b6ef5" : "var(--border)",
+              marginTop: 5, flexShrink: 0,
+              boxShadow: i === step ? "0 0 8px rgba(59,110,245,0.6)" : "none",
+              transition: "all 0.4s ease",
+            }}/>
+            <div>
+              <p style={{ fontSize: 13, color: "var(--text)", margin: 0, lineHeight: 1.4 }}>{s.en}</p>
+              <p dir="rtl" lang="ar" style={{ fontSize: 12, color: "var(--muted)", margin: "2px 0 0", lineHeight: 1.4 }}>{s.ar}</p>
+            </div>
           </div>
         ))}
       </div>
-      <div className="mt-8 w-full max-w-xs h-1 bg-white/5 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-violet-600 rounded-full transition-all duration-1000 ease-out"
-          style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
-        />
+
+      {/* Progress bar */}
+      <div style={{
+        width: "100%", maxWidth: 340,
+        height: 3, background: "var(--border)",
+        borderRadius: 2, overflow: "hidden",
+      }}>
+        <div style={{
+          height: "100%",
+          width: `${progress}%`,
+          background: "#3b6ef5",
+          borderRadius: 2,
+          transition: "width 1.2s ease",
+        }}/>
       </div>
-      <p className="text-white/20 text-xs mt-4">This takes 10–30 seconds</p>
-    </main>
+      <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 12 }}>
+        This may take up to 30 seconds · قد يستغرق حتى 30 ثانية
+      </p>
+    </div>
   );
 }
