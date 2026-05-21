@@ -89,18 +89,18 @@ export default function Results() {
         startOnLoad: false,
         theme: "base",
         themeVariables: {
-          primaryColor: "#1a2236",
-          primaryTextColor: "#c8d0e0",
+          primaryColor: "#e8eeff",
+          primaryTextColor: "#111827",
           primaryBorderColor: "#3b6ef5",
           lineColor: "#3b6ef5",
-          secondaryColor: "#0e1118",
-          tertiaryColor: "#07090f",
-          background: "#07090f",
-          mainBkg: "#1a2236",
+          secondaryColor: "#f0f4ff",
+          tertiaryColor: "#ffffff",
+          background: "#ffffff",
+          mainBkg: "#e8eeff",
           nodeBorder: "#3b6ef5",
-          clusterBkg: "#0e1118",
-          titleColor: "#c8d0e0",
-          edgeLabelBackground: "#0e1118",
+          clusterBkg: "#f0f4ff",
+          titleColor: "#111827",
+          edgeLabelBackground: "#f0f4ff",
           fontFamily: "IBM Plex Sans, sans-serif",
           fontSize: "14px",
         },
@@ -283,7 +283,7 @@ export default function Results() {
             <div style={{ marginBottom: 8, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", color: "#666" }}>
               Diagram · المخطط
             </div>
-            <div ref={printDiagramRef} style={{ background: "#fff", borderRadius: 8, padding: 16 }} />
+            <div ref={printDiagramRef} style={{ background: "#ffffff", borderRadius: 8, padding: "20px 16px", textAlign: "center" }} />
             {diagramError && (
               <pre style={{ fontSize: 11, color: "#888", background: "#f5f5f5", padding: 12, borderRadius: 6 }}>
                 {result.flowchart_mermaid}
@@ -373,9 +373,9 @@ export default function Results() {
                   <div
                     ref={diagramRef}
                     style={{
-                      background: "rgba(0,0,0,0.2)",
+                      background: "#ffffff",
                       borderRadius: 8,
-                      padding: 16,
+                      padding: "20px 16px",
                       overflowX: "auto",
                       textAlign: "center",
                       minHeight: 120,
