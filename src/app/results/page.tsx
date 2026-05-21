@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
 
@@ -13,6 +13,7 @@ interface Result {
   blockers: string[];
   extracted_text: string;
   language: string;
+  flowchart_mermaid?: string | null;
 }
 
 const LABELS = {
@@ -20,20 +21,21 @@ const LABELS = {
   decisions:     { en: "Decisions",         ar: "القرارات" },
   risks:         { en: "Risks & Blockers",  ar: "المخاطر والعوائق" },
   tasks:         { en: "Action Items",      ar: "بنود العمل" },
+  diagram:       { en: "Diagram",           ar: "المخطط" },
   extractedText: { en: "Extracted Text",    ar: "النص المستخرج" },
   noContent:     { en: "None detected",     ar: "لم يتم الكشف عن أي شيء" },
   language:      { en: "Detected language", ar: "اللغة المكتشفة" },
   export:        { en: "Export",            ar: "تصدير" },
-  newBoard:      { en: "New board",         ar: "سبورة جديدة" },
 };
 
-const TABS = [
-  { id: "overview", en: "Overview",      ar: "نظرة عامة" },
-  { id: "tasks",    en: "Action Items",  ar: "بنود العمل" },
-  { id: "text",     en: "Raw Text",      ar: "النص الخام" },
-] as const;
+type Tab = "overview" | "diagram" | "tasks" | "text";
 
-type Tab = typeof TABS[number]["id"];
+const ALL_TABS: { id: Tab; en: string; ar: string }[] = [
+  { id: "overview", en: "Overview",     ar: "نظرة عامة" },
+  { id: "diagram",  en: "Diagram",      ar: "المخطط" },
+  { id: "tasks",    en: "Action Items", ar: "بنود العمل" },
+  { id: "text",     en: "Raw Text",     ar: "النص الخام" },
+];
 
 const PRIORITY_COLOR: Record<string, string> = {
   high:   "#e05252",
@@ -51,6 +53,8 @@ function download(content: string, filename: string, type: string) {
 function buildMarkdown(r: Result): string {
   const lines = ["# BoardIQ — Board Notes\n"];
   if (r.summary) lines.push(`## Summary\n${r.summary}\n`);
+  if (r.summary_ar) lines.push(`## الملخص\n${r.summary_ar}\n`);
+  if (r.flowchart_mermaid) lines.push(`## Diagram\n\`\`\`mermaid\n${r.flowchart_mermaid}\n\`\`\`\n`);
   if (r.decisions.length) lines.push(`## Decisions\n${r.decisions.map(d => `- ${d}`).join("\n")}\n`);
   if (r.tasks.length) lines.push(`## Action Items\n${r.tasks.map(t => `- [ ] ${t.title}${t.owner ? ` (${t.owner})` : ""} [${t.priority}]`).join("\n")}\n`);
   if (r.risks.length) lines.push(`## Risks & Blockers\n${r.risks.map(x => `- ${x}`).join("\n")}\n`);
@@ -64,6 +68,9 @@ export default function Results() {
   const [image, setImage] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
   const [showExport, setShowExport] = useState(false);
+  const [diagramError, setDiagramError] = useState(false);
+  const diagramRef = useRef<HTMLDivElement>(null);
+  const printDiagramRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const r = sessionStorage.getItem("boardiq_result");
@@ -73,8 +80,64 @@ export default function Results() {
     if (img) setImage(img);
   }, [router]);
 
+  useEffect(() => {
+    const code = result?.flowchart_mermaid;
+    if (!code) return;
+
+    import("mermaid").then(({ default: mermaid }) => {
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: "base",
+        themeVariables: {
+          primaryColor: "#1a2236",
+          primaryTextColor: "#c8d0e0",
+          primaryBorderColor: "#3b6ef5",
+          lineColor: "#3b6ef5",
+          secondaryColor: "#0e1118",
+          tertiaryColor: "#07090f",
+          background: "#07090f",
+          mainBkg: "#1a2236",
+          nodeBorder: "#3b6ef5",
+          clusterBkg: "#0e1118",
+          titleColor: "#c8d0e0",
+          edgeLabelBackground: "#0e1118",
+          fontFamily: "IBM Plex Sans, sans-serif",
+          fontSize: "14px",
+        },
+      });
+
+      const renderAll = async () => {
+        try {
+          if (diagramRef.current) {
+            const { svg } = await mermaid.render("diagram-tab", code);
+            diagramRef.current.innerHTML = svg;
+            const svgEl = diagramRef.current.querySelector("svg");
+            if (svgEl) {
+              svgEl.style.maxWidth = "100%";
+              svgEl.style.height = "auto";
+            }
+          }
+          if (printDiagramRef.current) {
+            const { svg } = await mermaid.render("diagram-print", code);
+            printDiagramRef.current.innerHTML = svg;
+            const svgEl = printDiagramRef.current.querySelector("svg");
+            if (svgEl) {
+              svgEl.style.maxWidth = "100%";
+              svgEl.style.height = "auto";
+            }
+          }
+        } catch {
+          setDiagramError(true);
+        }
+      };
+      renderAll();
+    });
+  }, [result?.flowchart_mermaid]);
+
   if (!result) return null;
 
+  const hasDiagram = Boolean(result.flowchart_mermaid);
+  const visibleTabs = ALL_TABS.filter(t => t.id !== "diagram" || hasDiagram);
   const allRisks = [...(result.risks || []), ...(result.blockers || [])];
 
   const card = (children: React.ReactNode, extra?: React.CSSProperties) => (
@@ -89,7 +152,7 @@ export default function Results() {
     </div>
   );
 
-  const label = (en: string, ar: string) => (
+  const sectionLabel = (en: string, ar: string) => (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
       <span style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{en}</span>
       <span dir="rtl" lang="ar" style={{ fontSize: 11, color: "var(--muted)" }}>{ar}</span>
@@ -101,10 +164,13 @@ export default function Results() {
       <style>{`
         @media print {
           .no-print { display: none !important; }
+          .print-only { display: block !important; }
+          .print-diagram { display: block !important; }
           body { background: #fff !important; color: #111 !important; }
-          [style*="background: var(--surface)"] { background: #f9f9f9 !important; border-color: #ddd !important; }
+          .print-diagram svg { max-width: 100% !important; height: auto !important; }
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        .print-only { display: none; }
+        .print-diagram { display: none; }
       `}</style>
 
       {/* Header */}
@@ -131,7 +197,6 @@ export default function Results() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          {/* Language badge */}
           {result.language && (
             <span style={{
               fontSize: 11, padding: "3px 8px", borderRadius: 4,
@@ -141,7 +206,6 @@ export default function Results() {
             </span>
           )}
 
-          {/* Export dropdown */}
           <div style={{ position: "relative" }}>
             <button
               onClick={() => setShowExport(v => !v)}
@@ -185,7 +249,7 @@ export default function Results() {
 
       <main style={{ maxWidth: 620, margin: "0 auto", padding: "24px 20px 60px" }}>
 
-        {/* Image */}
+        {/* Board image */}
         {image && (
           <div style={{
             borderRadius: 10, overflow: "hidden",
@@ -198,7 +262,7 @@ export default function Results() {
         {/* Summary */}
         {result.summary && card(
           <>
-            {label(LABELS.summary.en, LABELS.summary.ar)}
+            {sectionLabel(LABELS.summary.en, LABELS.summary.ar)}
             <p style={{ fontSize: 14, color: "#c8d0e0", lineHeight: 1.7, margin: 0 }}>{result.summary}</p>
             {result.summary_ar && (
               <p dir="rtl" lang="ar" style={{
@@ -213,13 +277,28 @@ export default function Results() {
           { marginBottom: 16 }
         )}
 
+        {/* Print-only diagram — always visible when printing */}
+        {hasDiagram && (
+          <div className="print-diagram" style={{ marginBottom: 24, pageBreakInside: "avoid" }}>
+            <div style={{ marginBottom: 8, fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.07em", color: "#666" }}>
+              Diagram · المخطط
+            </div>
+            <div ref={printDiagramRef} style={{ background: "#fff", borderRadius: 8, padding: 16 }} />
+            {diagramError && (
+              <pre style={{ fontSize: 11, color: "#888", background: "#f5f5f5", padding: 12, borderRadius: 6 }}>
+                {result.flowchart_mermaid}
+              </pre>
+            )}
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="no-print" style={{
           display: "flex", gap: 2, padding: 4,
           background: "var(--surface)", border: "1px solid var(--border)",
           borderRadius: 8, marginBottom: 16,
         }}>
-          {TABS.map(t => (
+          {visibleTabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               flex: 1, padding: "7px 10px", borderRadius: 5,
               background: tab === t.id ? "rgba(255,255,255,0.07)" : "transparent",
@@ -238,7 +317,7 @@ export default function Results() {
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {result.decisions.length > 0 && card(
               <>
-                {label(LABELS.decisions.en, LABELS.decisions.ar)}
+                {sectionLabel(LABELS.decisions.en, LABELS.decisions.ar)}
                 <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
                   {result.decisions.map((d, i) => (
                     <li key={i} style={{ display: "flex", gap: 10, fontSize: 13, color: "#c8d0e0", lineHeight: 1.5 }}>
@@ -251,7 +330,7 @@ export default function Results() {
             )}
             {allRisks.length > 0 && card(
               <>
-                {label(LABELS.risks.en, LABELS.risks.ar)}
+                {sectionLabel(LABELS.risks.en, LABELS.risks.ar)}
                 <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
                   {allRisks.map((r, i) => (
                     <li key={i} style={{ display: "flex", gap: 10, fontSize: 13, color: "#c8d0e0", lineHeight: 1.5 }}>
@@ -268,6 +347,49 @@ export default function Results() {
                 {LABELS.noContent.en} · <span lang="ar">{LABELS.noContent.ar}</span>
               </p>
             )}
+          </div>
+        )}
+
+        {/* Diagram tab */}
+        {tab === "diagram" && hasDiagram && (
+          <div>
+            {card(
+              <>
+                {sectionLabel(LABELS.diagram.en, LABELS.diagram.ar)}
+                {diagramError ? (
+                  <>
+                    <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>
+                      Could not render diagram automatically. Raw Mermaid code below.
+                    </p>
+                    <pre style={{
+                      fontSize: 11, color: "#9aa0b0", background: "rgba(0,0,0,0.2)",
+                      padding: 12, borderRadius: 6, overflowX: "auto",
+                      fontFamily: "monospace", lineHeight: 1.6,
+                    }}>
+                      {result.flowchart_mermaid}
+                    </pre>
+                  </>
+                ) : (
+                  <div
+                    ref={diagramRef}
+                    style={{
+                      background: "rgba(0,0,0,0.2)",
+                      borderRadius: 8,
+                      padding: 16,
+                      overflowX: "auto",
+                      textAlign: "center",
+                      minHeight: 120,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  />
+                )}
+              </>
+            )}
+            <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 10, textAlign: "center" }}>
+              Auto-generated from whiteboard · مُنشأ تلقائيًا من السبورة
+            </p>
           </div>
         )}
 
@@ -311,7 +433,7 @@ export default function Results() {
         {/* Raw text tab */}
         {tab === "text" && card(
           <>
-            {label(LABELS.extractedText.en, LABELS.extractedText.ar)}
+            {sectionLabel(LABELS.extractedText.en, LABELS.extractedText.ar)}
             {result.extracted_text ? (
               <pre style={{
                 fontSize: 12, lineHeight: 1.7, margin: 0,

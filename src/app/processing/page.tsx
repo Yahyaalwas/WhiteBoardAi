@@ -91,6 +91,7 @@ export default function Processing() {
         })),
         extracted_text: result.extracted_text || "",
         language: (result.language_detected || ["Unknown"]).join(", "),
+        flowchart_mermaid: result.flowchart?.mermaid || null,
       }));
 
       router.push("/results");
